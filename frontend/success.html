@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment Success</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    #qrcode {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>✅ Payment Successful</h1>
+  <p>Here is your ticket QR code:</p>
+  <div id="qrcode"></div>
+  <br>
+  <a href="dashboard.html">Back to Dashboard</a>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert("Not authorized");
+      window.location.href = 'login.html';
+    }
+
+    const user = JSON.parse(atob(token.split('.')[1]));
+
+    // Simulated eventId – in production, pass it from backend or store it in localStorage before redirect
+    const eventId = localStorage.getItem('lastBookedEventId');
+
+    if (!eventId) {
+      document.getElementById('qrcode').innerHTML = '⚠️ No event info found.';
+    } else {
+      const ticketData = {
+        userId: user.id,
+        eventId: eventId,
+        timestamp: Date.now()
+      };
+
+      new QRCode(document.getElementById("qrcode"), {
+        text: JSON.stringify(ticketData),
+        width: 200,
+        height: 200
+      });
+    }
+  </script>
+</body>
+</html>

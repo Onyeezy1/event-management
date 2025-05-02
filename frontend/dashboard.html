@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
+
+  <!-- Stripe.js -->
+  <script src="https://js.stripe.com/v3/"></script>
+
+  <!-- FullCalendar -->
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+</head>
+<body>
+  <h1>🎟 Event Dashboard</h1>
+  <p id="greeting">Loading user info...</p>
+  <button id="logoutBtn">Logout</button>
+
+  <h2 id="organizerHeading" style="display:none">Create or Edit Event</h2>
+  <form id="eventForm" style="display:none">
+    <input type="text" id="title" placeholder="Event Title" required><br><br>
+    <textarea id="description" placeholder="Description" required></textarea><br><br>
+    <input type="number" id="price" placeholder="Price ($)" required><br><br>
+    <input type="date" id="date" required><br><br>
+    <input type="text" id="location" placeholder="Location" required><br><br>
+    <button type="submit">Save Event</button>
+  </form>
+
+  <div style="margin-top: 20px; margin-bottom: 15px;">
+    <input type="text" id="searchInput" placeholder="Search title/description" style="width: 200px;">
+    <input type="date" id="dateFilter" style="margin-left: 10px;">
+    <input type="text" id="locationFilter" placeholder="Location" style="width: 150px; margin-left: 10px;">
+  </div>
+
+  <h2>Available Events</h2>
+  <div id="eventList">Loading events...</div>
+
+  <h2>Event Calendar</h2>
+  <div id="calendar"></div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const greeting = document.getElementById('greeting');
+    const eventList = document.getElementById('eventList');
+    const form = document.getElementById('eventForm');
+    const heading = document.getElementById('organizerHeading');
+    let editingEventId = null;
+    let allEvents = [];
+
+    if (!token) {
+      alert('Please log in first');
+      window.location.href = 'login.html';
+    }
+
+    const parseJwt = (token) => {
+      try {
+        return JSON.parse(atob(token.split('.')[1]));
+      } catch (e) {
+        return null;
+      }
+    };
+
+    const user = parseJwt(token);
+    if (user) {
+      greeting.textContent = `Welcome, ${user.role.toUpperCase()}!`;
+      if (user.role === 'organizer') {
+        form.style.display = 'block';
+        heading.style.display = 'block';
+      }
+    }
+
+    function loadEvents() {
+      fetch('http://localhost:8888/api/events')
+        .then(res => res.json())
+        .then(events => {
+          allEvents = events;
+          renderEvents(events);
+          renderCalendar(events);
+        })
+        .catch(err => {
+          eventList.textContent = 'Failed to load events.';
+          console.error(err);
+        });
+    }
+
+    function renderEvents(events) {
+      eventList.innerHTML = '';
+      events.forEach(event => {
+        const creatorId = event.createdBy?._id || event.createdBy;
+        const isCreator = user.id === creatorId;
+
+        const div = document.createElement('div');
+        div.innerHTML = `
+          <strong>${event.title}</strong><br>
+          ${event.description}<br>
+          <em>$${event.price}</em><br>
+          📍 ${event.location} | 📅 ${event.date}<br>
+          ${user.role === 'attendee'
+            ? `<button onclick='bookEvent(${JSON.stringify(event)})'>Book Now</button>`
+            : isCreator
+              ? `<button onclick='loadEventForEdit(${JSON.stringify(event)})'>Edit</button>`
+              : ''}
+          <hr>
+        `;
+        eventList.appendChild(div);
+      });
+    }
+
+    function renderCalendar(events) {
+      const calendarEl = document.getElementById('calendar');
+      const calendarEvents = events.map(e => ({
+        title: e.title,
+        start: e.date,
+        extendedProps: {
+          description: e.description,
+          location: e.location,
+          price: e.price
+        }
+      }));
+
+      const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        height: 500,
+        events: calendarEvents,
+        eventClick: function(info) {
+          const props = info.event.extendedProps;
+          alert(
+            `${info.event.title}\n📍 ${props.location}\n💵 $${props.price}\n📝 ${props.description}`
+          );
+        }
+      });
+
+      calendar.render();
+    }
+
+    function applyFilters() {
+      const keyword = document.getElementById('searchInput').value.toLowerCase();
+      const date = document.getElementById('dateFilter').value;
+      const location = document.getElementById('locationFilter').value.toLowerCase();
+
+      const filtered = allEvents.filter(event => {
+        const matchesKeyword =
+          event.title.toLowerCase().includes(keyword) ||
+          event.description.toLowerCase().includes(keyword);
+        const matchesDate = date ? event.date === date : true;
+        const matchesLocation = location ? event.location.toLowerCase().includes(location) : true;
+
+        return matchesKeyword && matchesDate && matchesLocation;
+      });
+
+      renderEvents(filtered);
+    }
+
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('dateFilter').addEventListener('change', applyFilters);
+    document.getElementById('locationFilter').addEventListener('input', applyFilters);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const eventData = {
+        title: document.getElementById('title').value,
+        description: document.getElementById('description').value,
+        price: parseFloat(document.getElementById('price').value),
+        date: document.getElementById('date').value,
+        location: document.getElementById('location').value
+      };
+
+      const url = editingEventId
+        ? `http://localhost:8888/api/events/${editingEventId}`
+        : 'http://localhost:8888/api/events';
+
+      const method = editingEventId ? 'PUT' : 'POST';
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(eventData)
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          alert(editingEventId ? 'Event updated!' : 'Event created!');
+          form.reset();
+          editingEventId = null;
+          loadEvents();
+        } else {
+          alert(result.message || 'Failed to save event');
+        }
+      } catch (err) {
+        alert('Network error');
+        console.error(err);
+      }
+    });
+
+    function loadEventForEdit(event) {
+      editingEventId = event._id;
+      form.style.display = 'block';
+      heading.style.display = 'block';
+
+      document.getElementById('title').value = event.title;
+      document.getElementById('description').value = event.description;
+      document.getElementById('price').value = event.price;
+      document.getElementById('date').value = event.date;
+      document.getElementById('location').value = event.location;
+
+      form.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ✅ Updated: store last booked event ID before Stripe redirect
+    async function bookEvent(event) {
+      try {
+        const res = await fetch('http://localhost:8888/api/checkout/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ event })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.id) {
+          localStorage.setItem('lastBookedEventId', event._id); // ✅ save event ID
+          const stripe = Stripe('pk_test_51RJkJcPeC9pM9f15bEncuoVRn5g0buhlqgkAMIRj4BYZiXvvyZyRf0XW3k8uf3iQ3uHhILwQF74V1f5zrSGOEJ5E00IlNI3bSr'); // Replace with your public Stripe key
+          stripe.redirectToCheckout({ sessionId: data.id });
+        } else {
+          alert(data.error || 'Checkout failed');
+        }
+      } catch (err) {
+        alert('Booking failed');
+        console.error(err);
+      }
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('token');
+      window.location.href = 'login.html';
+    });
+
+    loadEvents(); // initial load
+  </script>
+</body>
+</html>
