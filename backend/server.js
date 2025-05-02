@@ -12,7 +12,7 @@ dotenv.config();
 
 const app = express();
 
-// ✅ Corrected CORS config (NO trailing slash)
+
 const corsOptions = {
   origin: 'https://relaxed-selkie-90bd29.netlify.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -20,11 +20,11 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// ✅ Security and JSON parsing
+
 app.use(helmet());
 app.use(express.json());
 
-// ✅ Connect to MongoDB
+
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -32,12 +32,12 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => console.log('✅ MongoDB connected'))
 .catch((err) => console.error('❌ MongoDB error:', err));
 
-// ✅ API routes
+
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/checkout', stripeRoutes);
 
-// ✅ Root test route
+
 app.get('/', (req, res) => res.send('API running'));
 
 const PORT = process.env.PORT || 8888;
