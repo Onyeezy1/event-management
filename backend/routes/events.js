@@ -23,7 +23,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// ✅ Update existing event by ID
+// Update existing event by ID
 router.put('/:id', async (req, res) => {
   try {
     const updated = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true });
