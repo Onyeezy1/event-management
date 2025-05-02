@@ -12,8 +12,13 @@ dotenv.config();
 
 const app = express();
 
-// ✅ Use default CORS — this worked in your last project
-app.use(cors());
+// ✅ CORS setup to allow Netlify frontend
+const corsOptions = {
+  origin: 'https://relaxed-selkie-90bd29.netlify.app/', // 🔁 Replace this with your actual deployed frontend URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use(cors(corsOptions));
 
 // ✅ Security and JSON parsing
 app.use(helmet());
