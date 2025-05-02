@@ -18,32 +18,33 @@
   <a href="dashboard.html">Back to Dashboard</a>
 
   <script>
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert("Not authorized");
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error("No token found");
+
+      const user = JSON.parse(atob(token.split('.')[1]));
+      const eventId = localStorage.getItem('lastBookedEventId');
+
+      if (!eventId) {
+        document.getElementById('qrcode').innerHTML = '⚠️ No event info found.';
+      } else {
+        const ticketData = {
+          userId: user.id,
+          eventId: eventId,
+          timestamp: Date.now()
+        };
+
+        new QRCode(document.getElementById("qrcode"), {
+          text: JSON.stringify(ticketData),
+          width: 200,
+          height: 200
+        });
+      }
+    } catch (err) {
+      alert("Session expired or not authorized");
       window.location.href = 'login.html';
-    }
-
-    const user = JSON.parse(atob(token.split('.')[1]));
-
-    // Simulated eventId – in production, pass it from backend or store it in localStorage before redirect
-    const eventId = localStorage.getItem('lastBookedEventId');
-
-    if (!eventId) {
-      document.getElementById('qrcode').innerHTML = '⚠️ No event info found.';
-    } else {
-      const ticketData = {
-        userId: user.id,
-        eventId: eventId,
-        timestamp: Date.now()
-      };
-
-      new QRCode(document.getElementById("qrcode"), {
-        text: JSON.stringify(ticketData),
-        width: 200,
-        height: 200
-      });
     }
   </script>
 </body>
 </html>
+
