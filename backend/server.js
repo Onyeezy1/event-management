@@ -12,9 +12,9 @@ dotenv.config();
 
 const app = express();
 
-// ✅ CORS setup to allow Netlify frontend
+// ✅ Corrected CORS config (NO trailing slash)
 const corsOptions = {
-  origin: 'https://relaxed-selkie-90bd29.netlify.app/', // 🔁 Replace this with your actual deployed frontend URL
+  origin: 'https://relaxed-selkie-90bd29.netlify.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
@@ -42,3 +42,4 @@ app.get('/', (req, res) => res.send('API running'));
 
 const PORT = process.env.PORT || 8888;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
