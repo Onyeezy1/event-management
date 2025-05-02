@@ -4,11 +4,7 @@
   <meta charset="UTF-8">
   <title>Dashboard</title>
   <link rel="stylesheet" href="assets/css/styles.css">
-
-  <!-- Stripe.js -->
   <script src="https://js.stripe.com/v3/"></script>
-
-  <!-- FullCalendar -->
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
 </head>
@@ -71,7 +67,7 @@
     }
 
     function loadEvents() {
-      fetch('http://localhost:8888/api/events')
+      fetch('https://event-backend-jjpt.onrender.com/api/events')
         .then(res => res.json())
         .then(events => {
           allEvents = events;
@@ -168,8 +164,8 @@
       };
 
       const url = editingEventId
-        ? `http://localhost:8888/api/events/${editingEventId}`
-        : 'http://localhost:8888/api/events';
+        ? `https://event-backend-jjpt.onrender.com/api/events/${editingEventId}`
+        : 'https://event-backend-jjpt.onrender.com/api/events';
 
       const method = editingEventId ? 'PUT' : 'POST';
 
@@ -212,10 +208,9 @@
       form.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // ✅ Updated: store last booked event ID before Stripe redirect
     async function bookEvent(event) {
       try {
-        const res = await fetch('http://localhost:8888/api/checkout/create-checkout-session', {
+        const res = await fetch('https://event-backend-jjpt.onrender.com/api/checkout/create-checkout-session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -225,8 +220,8 @@
 
         const data = await res.json();
         if (res.ok && data.id) {
-          localStorage.setItem('lastBookedEventId', event._id); // ✅ save event ID
-          const stripe = Stripe('pk_test_51RJkJcPeC9pM9f15bEncuoVRn5g0buhlqgkAMIRj4BYZiXvvyZyRf0XW3k8uf3iQ3uHhILwQF74V1f5zrSGOEJ5E00IlNI3bSr'); // Replace with your public Stripe key
+          localStorage.setItem('lastBookedEventId', event._id); 
+          const stripe = Stripe('pk_test_51RJkJcPeC9pM9f15bEncuoVRn5g0buhlqgkAMIRj4BYZiXvvyZyRf0XW3k8uf3iQ3uHhILwQF74V1f5zrSGOEJ5E00IlNI3bSr'); 
           stripe.redirectToCheckout({ sessionId: data.id });
         } else {
           alert(data.error || 'Checkout failed');
@@ -242,7 +237,8 @@
       window.location.href = 'login.html';
     });
 
-    loadEvents(); // initial load
+    loadEvents();
   </script>
 </body>
 </html>
+
